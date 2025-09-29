@@ -1,6 +1,5 @@
 import sys
 import platform
-os_name = platform.system()
 import requests
 from bs4 import BeautifulSoup
 import speedtest
@@ -13,15 +12,17 @@ from datetime import datetime, timedelta
 import time
 import schedule
 from colorama import init, Fore, Style
-init(autoreset=True)
 import pyttsx3
-engine = pyttsx3.init()
 import sqlite3
 from prettytable import PrettyTable
 import matplotlib.pyplot as plt
 from fpdf import FPDF
 import mplcursors
 import pydoc
+
+os_name = platform.system()
+init(autoreset=True)
+engine = pyttsx3.init()
 
 # +++++++++++++++ Function Tools ++++++++++++++++++ #
  # check whether the value is a list or a datetime, and convert everything to a string for safe printing.
