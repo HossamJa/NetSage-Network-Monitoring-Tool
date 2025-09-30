@@ -1,12 +1,6 @@
-import sys
-import pyttsx3
-from datetime import datetime, timedelta
-import mplcursors
-from backend.features import check_speed, get_compareson, get_ISPndLoc_info
-from PyQt5.QtWidgets import (QApplication, QWidget,QVBoxLayout, QLabel, QScrollArea,
-                             QLineEdit, QPushButton, QHBoxLayout, QCheckBox,
-                             QTableWidget, QTableWidgetItem, QSizePolicy, QComboBox)                             
-from PyQt5.QtCore import QSize, Qt, QTimer, QThread, pyqtSignal
+from PyQt5.QtWidgets import ( QWidget,QVBoxLayout, QLabel,
+                             QLineEdit, QPushButton)                             
+from PyQt5.QtCore import Qt
 from gui.threads import WebChecker
 
 class WebCheckerWidget(QWidget):
@@ -45,6 +39,12 @@ class WebCheckerWidget(QWidget):
         self.web_message.setText("🔄 Checking URL Status....")
     
     def show_web_statu(self, web_data):
+
+        err_messge = "❌ No Internet, Please Check Your Connection"
+        if err_messge in web_data:
+            self.web_message.setText(err_messge)
+            return    
+
         if web_data["domain_info"] is None:
             self.web_message.setText(web_data["status"])
             self.website_statue.setText("")

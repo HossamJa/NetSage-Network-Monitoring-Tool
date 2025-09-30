@@ -76,8 +76,7 @@ def run_cli():
         except KeyboardInterrupt:
             print("\n👋 Exiting TB-NetMon CLI. See you!\n")
             break
-        except Exception as err:
-            print(Fore.RED + "🌋 An Error Accured 🌋\n" + Style.RESET_ALL, err )
+
 
 # ====================== Tools ================ #
 
@@ -238,7 +237,9 @@ def run_auto_test():
 def internet_stat():
     try:
         while True:
-            internet_status, trblshoting_suggs = check_internet()
+            internet_data = check_internet()
+            internet_status = internet_data["net_status"]
+            trblshoting_suggs = internet_data["suggests"]
 
             clear_terminal()  # clears the terminal before updating 
 
@@ -339,13 +340,19 @@ def isp_info():
     try:
         thread.start()
         info = get_ISPndLoc_info()
-        if "Faild" in info:
-            print(Fore.RED + f"\n❌ {info}" + Style.RESET_ALL)
-            return
+        if "Error" in info:
+            error = info["Error"]
+            message = info["Message"]
+            print(Fore.RED + f"\n❌ {message}\n {error}" + Style.RESET_ALL)
+
 
     finally:
         running[0] = False
         thread.join()
+        
+        # if there is an error, stop with return 
+        if error:
+            return
 
         print(Fore.CYAN + "\n\n📍 Your Current Network Location & ISP Info\n" \
                              "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" + Style.RESET_ALL)
@@ -381,7 +388,9 @@ def url_info():
                 thread = threading.Thread(target=spinner, args=("Checking URL Status", running)) 
                 thread.start()
 
-                data = check_website_stat(url)                
+                data = check_website_stat(url) 
+                err_messge = "❌ No Internet, Please Check Your Connection"
+
 
             except KeyboardInterrupt:
                 print(Fore.RED + "\n↩ Exiting Website Checker!\n" + Style.RESET_ALL)
@@ -393,11 +402,15 @@ def url_info():
             finally:
                 running[0] = False       
                 thread.join()
-                    
+
+                if err_messge in data:
+                    print(f"\n {err_messge}")
+                    return
+
                 print(Fore.CYAN + "\n\n🔎 Website Report\n" \
                     "──────────────────────────────────────────────\n" + Style.RESET_ALL)
-
                 if data["domain_info"] is None: # Check if there was an error 
+                        
                         print(f"{Fore.GREEN}📶 Status: {Style.RESET_ALL}\n{data['status']}")
                 else:
                     # Status

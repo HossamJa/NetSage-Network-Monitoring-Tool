@@ -144,9 +144,11 @@ class SpeedTestWidget(QWidget):
     def show_isp_info(self, info):
 
         if "Error" in info:
+            error = info["Error"]
+            message = info["Message"]
             self.isp_message.setText(f"""
-                <p style='color: red;'>{info["Error"]}</p>
-            """)
+                <p style='color: red;'>{message}\n{error}</p>
+            """) 
         else:    
             self.ISP_info.setText(f""" 
             <html>                          

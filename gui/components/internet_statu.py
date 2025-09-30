@@ -54,7 +54,10 @@ class InternetStatWidget(QWidget):
         self.NST_worker.start()
     
     def show_NetStatu(self, statu):
-        internet_statu, trblshoting_suggs = statu
+        internet_data = statu
+        internet_statu = internet_data["net_status"]
+        trblshoting_suggs = internet_data["suggests"]
+
         formatted_suggestions = trblshoting_suggs.replace("\n", "<br>")
         internet_status = internet_statu.replace("\n", "<br>")
 

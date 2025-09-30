@@ -8,7 +8,7 @@ import re
 import socket
 import ssl
 import whois
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 import time
 import schedule
 from colorama import init, Fore, Style
@@ -24,7 +24,7 @@ os_name = platform.system()
 init(autoreset=True)
 engine = pyttsx3.init()
 
-# +++++++++++++++ Function Tools ++++++++++++++++++ #
+# +++++++++++++++ Utility Functions ++++++++++++++++++ #
  # check whether the value is a list or a datetime, and convert everything to a string for safe printing.
 def format_date(value):
 
@@ -116,7 +116,9 @@ def get_ISPndLoc_info():
         }
         # get the country from check_speed()
     except Exception as er:
-        return {"Error" : "🔴 Faild to get the ISP and Location info"}
+        return {"Error" : er,
+                "Message" : "🔴 Faild to get the ISP and Location info"
+                }
 
 # Get Speed test comapareson with the averge
 def get_compareson():
@@ -133,9 +135,19 @@ def get_compareson():
     
     else:
         try:
-            respons = requests.get(f'https://www.speedtest.net/global-index/{user_country.lower()}#fixed')
-            soup = BeautifulSoup(respons.text, "html.parser")
-
+            while True:
+                respons = requests.get(f'https://www.speedtest.net/global-index/{user_country.lower()}#fixed')
+                if respons and respons.status_code == 200:
+                    soup = BeautifulSoup(respons.text, "html.parser")
+                    break
+                elif respons and respons.status_code != 200:
+                    print(f"Error: Received status code {respons.status_code}")
+                    return f"❌No Global Speed Data Was Given❗"
+                elif not respons:
+                    print("No response received, retrying...")
+                    time.sleep(3)  # Wait before retrying
+            
+            # Scraping the net speed data of countries from the Speedtest site
             down_data = soup.find("div", {"class": "pure-u-1 pure-u-lg-1-2 results-column fixedMedian-results"}) 
             down_data1 = down_data.find("div", {"class": "headings display-flex-md"})  
             down_data2 = down_data1.find("div", {"class": "result-group result-group-icon download display-table display-block-md"})
@@ -180,8 +192,7 @@ def get_compareson():
         except Exception as er:
             return f"❌No Global Speed Data Was Given❗\nError:\n{er}"
 
-# Get the Internet Status and TrblShting
-
+# Get the Internet Status and Trubleshooting
 def check_internet(use_color=True):
     # Set colors if in CLI mode
     if use_color:
@@ -213,18 +224,18 @@ def check_internet(use_color=True):
             result = subprocess.run(["ping", "-n", "1", google_adres], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, timeout=2)
             internet_access = result.returncode == 0
         except Exception as e:
-            print(red + f"❌ Getting the Internet Status failed!\n\nError:\n" + reset + str(e))
+            error = red + f"❌ Getting the Internet Status failed!\n\nError:\n" + reset + str(e)
             internet_access = False
 
             try:
                 result = subprocess.run(["ping", "-n", "1", google_ip], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, timeout=2)
                 ping_ip_dns = result.returncode == 0
             except Exception as e:
-                print(f"Ping failed: {e}")
+                error = f"Ping failed: {e}"
                 ping_ip_dns = False
 
     except Exception as e:
-        print(f"Ping failed: {e}")
+        error = f"Ping failed: {e}"
         conect_router = False
 
     if conect_router:
@@ -281,7 +292,10 @@ def check_internet(use_color=True):
             "  📌 Check your router if it's on."
         )
 
-    return internet_status, trblshoting_suggs
+    return {"error": error, 
+            "net_status": internet_status,
+            "suggests": trblshoting_suggs
+            }
 
 # Get website Status
 def check_website_stat(url):
@@ -294,6 +308,11 @@ def check_website_stat(url):
     ping_sever = []
     meta_titl = None
     meta_description = None
+
+    # check internet connection
+    net = check_internet()
+    if "🔴 Completely Disconnected From The Router!" in net["net_status"] or "Ping failed" in net["error"]:
+        return "❌ No Internet, Please Check Your Connection"
 
     try:
         valid = r"^https?://(www\.)?(?P<domain>[^/]+)"
@@ -432,7 +451,8 @@ def check_website_stat(url):
 
 # Get Wifi signal Quality 
 def check_Wifi_quality():
-   
+    
+    # getting the OS name to run the apropreate cmds
     if os_name == "Windows":
         wf_info_cmnd = "netsh wlan show interfaces"
 
@@ -526,6 +546,11 @@ def give_tst(down_threshold, up_threshold, ping_threshold):
             return
         
         time = test["Date_Time"]
+        # Parse ISO 8601 format
+        timestamp = datetime.strptime(time, '%Y-%m-%dT%H:%M:%S.%fZ').replace(tzinfo=timezone.utc)
+        # Format as 'month day, year at hour:min:sec PM/AM'
+        date_time = timestamp.strftime('%B %d, %Y at %I:%M:%S %p')
+
         download = test["Download"]
         upload = test["Upload"]
         ping = test["Ping"]
@@ -560,7 +585,7 @@ def give_tst(down_threshold, up_threshold, ping_threshold):
         ┃ 📡 Internet Speed Test Results        ┃
         ┣━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┫
         ┃     
-        ┃ 🕒 Time: {Fore.CYAN + time + Fore.RESET}
+        ┃ 🕒 Time: {Fore.CYAN + date_time + Fore.RESET}
         ┃     
         ┃ ⬇ Download Speed: {download:.2f} Mbps {dwn_stat} 
         ┃
