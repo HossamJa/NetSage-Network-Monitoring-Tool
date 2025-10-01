@@ -349,7 +349,7 @@ def isp_info():
     finally:
         running[0] = False
         thread.join()
-        
+
         # if there is an error, stop with return 
         if error:
             return
@@ -468,8 +468,10 @@ def export_logs():
     range_type = filter_date()
     filename = input(Fore.YELLOW + "⬜ Enter a Name for this PDF >> " + Style.RESET_ALL).strip()
     print("")
-    result = export_tst_logs(range_type, filename + '.pdf')
-    
+    if not filename:
+        result = export_tst_logs(range_type)
+    else:
+        result = export_tst_logs(range_type, filename + '.pdf')
     print(Fore.GREEN + result + Style.RESET_ALL)
 
 def delet_data():

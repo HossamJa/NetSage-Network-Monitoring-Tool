@@ -15,11 +15,13 @@ from colorama import init, Fore, Style
 import pyttsx3
 import sqlite3
 from prettytable import PrettyTable
-import matplotlib.pyplot as plt
 from fpdf import FPDF
-import mplcursors
 import pydoc
+import plotly.graph_objs as go
+from plotly.subplots import make_subplots
+import plotly.io as pio
 
+pio.renderers.default = "browser"
 os_name = platform.system()
 init(autoreset=True)
 engine = pyttsx3.init()
@@ -685,15 +687,12 @@ def delet_rsults():
     crt_db.commit()
     crt_db.close()
 
-# Format the data generate a graph 
+# Format the data and generate a graph 
 def tst_hstry_graph(range_type="all"):
-
     results = ftch_tst_rsults()
-
     if range_type != "all":
         now = datetime.now()
         filtered = []
-
         for row in results:
             ts = datetime.fromisoformat(row[0].replace("Z", ""))
             if range_type == "24h" and ts > now - timedelta(days=1):
@@ -702,50 +701,57 @@ def tst_hstry_graph(range_type="all"):
                 filtered.append(row)
             elif range_type == "30d" and ts > now - timedelta(days=30):
                 filtered.append(row)
-        results = filtered  
+        results = filtered
 
     if not results:
         print("❗ No test history found ❗")
         ts = f"{datetime.now()}Z"
         results = [(ts.replace(" ", "T"), 0, 0, 0)]
 
-
-    # Unpack data and format timestamps
-    timestamps = [datetime.fromisoformat(row[0].replace('Z', '')).strftime("%Y-%m-%d\n%H:%M:%S") for row in results]
+    timestamps = [datetime.fromisoformat(row[0].replace('Z', '')) for row in results]
     downloads = [row[1] for row in results]
     uploads = [row[2] for row in results]
     pings = [row[3] for row in results]
 
-    fig, ax1 = plt.subplots(figsize=(12, 6))
+    # Format timestamps for hover text
+    hover_times = [dt.strftime('%Y-%m-%d %H:%M:%S') for dt in timestamps]
 
-    # Plot download & upload
-    ax1.plot(timestamps, downloads, label="Download (Mbps)", color='tab:blue', marker='o')
-    ax1.plot(timestamps, uploads, label="Upload (Mbps)", color='tab:green', marker='s')
-    ax1.set_ylabel("Speed (Mbps)")
-    ax1.set_xlabel("Date & Time")
-    ax1.tick_params(axis='x', rotation=45)
+    fig = make_subplots(rows=3, cols=1, shared_xaxes=True, subplot_titles=("Download (Mbps)", "Upload (Mbps)", "Ping (ms)"))
 
-    # Second Y-axis for ping
-    ax2 = ax1.twinx()
-    ax2.plot(timestamps, pings, label="Ping (ms)", color='tab:red', marker='^')
-    ax2.set_ylabel("Ping (ms)", color='tab:red')
-    ax2.tick_params(axis='y', labelcolor='tab:red')
+    fig.add_trace(go.Scatter(
+        x=timestamps, y=downloads, mode='lines+markers', name='Download (Mbps)', line=dict(color='blue'),
+        hovertemplate='<b>Date & Time:</b> %{customdata}<br><b>Download:</b> %{y:.2f} Mbps',
+        customdata=hover_times
+    ), row=1, col=1)
+    fig.add_trace(go.Scatter(
+        x=timestamps, y=uploads, mode='lines+markers', name='Upload (Mbps)', line=dict(color='green'),
+        hovertemplate='<b>Date & Time:</b> %{customdata}<br><b>Upload:</b> %{y:.2f} Mbps',
+        customdata=hover_times
+    ), row=2, col=1)
+    fig.add_trace(go.Scatter(
+        x=timestamps, y=pings, mode='lines+markers', name='Ping (ms)', line=dict(color='red'),
+        hovertemplate='<b>Date & Time:</b> %{customdata}<br><b>Ping:</b> %{y:.2f} ms',
+        customdata=hover_times
+    ), row=3, col=1)
 
-    # Combine legends
-    lines, labels = ax1.get_legend_handles_labels()
-    lines2, labels2 = ax2.get_legend_handles_labels()
-    ax1.legend(lines + lines2, labels + labels2, loc="upper left")
+    fig.update_layout(
+        height=900,
+        title_text="Network Speed Test History",
+        showlegend=True,
+        legend=dict(
+            orientation="h",
+            yanchor="bottom",
+            y=1.02,
+            xanchor="right",
+            x=1
+        )
+    )
+    fig.update_xaxes(title_text="Date & Time", row=3, col=1)
+    fig.update_yaxes(title_text="Mbps", row=1, col=1)
+    fig.update_yaxes(title_text="Mbps", row=2, col=1)
+    fig.update_yaxes(title_text="ms", row=3, col=1)
 
-    plt.title("Network Speed Test History")
-    plt.tight_layout()
-    plt.grid(True)
-    plt.show()
-    
-    # Add Hover Tooltips for hovering behavior. Note: This only works in environments that support GUI backends 
-    cursor = mplcursors.cursor(hover=True)
-    cursor.connect("add", lambda sel: sel.annotation.set_text(
-        f"{timestamps[sel.index]}\nDownload: {downloads[sel.index]} Mbps\nUpload: {uploads[sel.index]} Mbps\nPing: {pings[sel.index]} ms"
-    ))
+    fig.show()
 
 # Show the history as Table in CLI only
 def tst_hstry_table(range_type="all"):
@@ -779,6 +785,8 @@ def tst_hstry_table(range_type="all"):
 
 # Export Network Logs as PDF
 def export_tst_logs(range_type="all", filename="network_logs.pdf"):
+    import os
+    import tempfile
     data = ftch_tst_rsults()
     if not data:
         return "❗ No data to export ❗"
@@ -787,41 +795,136 @@ def export_tst_logs(range_type="all", filename="network_logs.pdf"):
     if range_type != "all":
         now = datetime.now()
         filtered = []
-
         for row in data:
             ts = row[0]
             try:
                 ts = datetime.fromisoformat(ts.replace("Z", ""))
             except:
                 ts = datetime.fromtimestamp(ts)
-
             if range_type == "24h" and ts > now - timedelta(days=1):
                 filtered.append(row)
             elif range_type == "7d" and ts > now - timedelta(days=7):
                 filtered.append(row)
             elif range_type == "30d" and ts > now - timedelta(days=30):
                 filtered.append(row)
-        
         data = filtered
 
     if not data:
         return "❗ No data available for the selected range ❗"
 
-    # Generate PDF
+    # If filename is not an absolute path, save to current working directory
+    if not os.path.isabs(filename):
+        filename = os.path.abspath(filename)
+
+    # Prepare summary statistics
+    downloads = [row[1] for row in data]
+    uploads = [row[2] for row in data]
+    pings = [row[3] for row in data]
+    timestamps = [datetime.fromisoformat(row[0].replace('Z', '')) for row in data]
+    min_time = min(timestamps).strftime('%Y-%m-%d %H:%M:%S')
+    max_time = max(timestamps).strftime('%Y-%m-%d %H:%M:%S')
+    avg_download = sum(downloads) / len(downloads)
+    avg_upload = sum(uploads) / len(uploads)
+    avg_ping = sum(pings) / len(pings)
+    max_download = max(downloads)
+    min_download = min(downloads)
+    max_upload = max(uploads)
+    min_upload = min(uploads)
+    max_ping = max(pings)
+    min_ping = min(pings)
+
+    # Generate and save the graph as an image
+    import plotly.graph_objs as go
+    from plotly.subplots import make_subplots
+    import plotly.io as pio
+    import PIL.Image
+
+    fig = make_subplots(rows=3, cols=1, shared_xaxes=True, subplot_titles=("Download (Mbps)", "Upload (Mbps)", "Ping (ms)"))
+    hover_times = [dt.strftime('%Y-%m-%d %H:%M:%S') for dt in timestamps]
+    fig.add_trace(go.Scatter(x=timestamps, y=downloads, mode='lines+markers', name='Download (Mbps)', line=dict(color='blue'), hovertemplate='<b>Date & Time:</b> %{customdata}<br><b>Download:</b> %{y:.2f} Mbps', customdata=hover_times), row=1, col=1)
+    fig.add_trace(go.Scatter(x=timestamps, y=uploads, mode='lines+markers', name='Upload (Mbps)', line=dict(color='green'), hovertemplate='<b>Date & Time:</b> %{customdata}<br><b>Upload:</b> %{y:.2f} Mbps', customdata=hover_times), row=2, col=1)
+    fig.add_trace(go.Scatter(x=timestamps, y=pings, mode='lines+markers', name='Ping (ms)', line=dict(color='red'), hovertemplate='<b>Date & Time:</b> %{customdata}<br><b>Ping:</b> %{y:.2f} ms', customdata=hover_times), row=3, col=1)
+    fig.update_layout(height=900, title_text="Network Speed Test History", showlegend=True, legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1))
+    fig.update_xaxes(title_text="Date & Time", row=3, col=1)
+    fig.update_yaxes(title_text="Mbps", row=1, col=1)
+    fig.update_yaxes(title_text="Mbps", row=2, col=1)
+    fig.update_yaxes(title_text="ms", row=3, col=1)
+
+    # Save the figure as a temporary PNG
+    with tempfile.NamedTemporaryFile(suffix='.png', delete=False) as tmpfile:
+        fig.write_image(tmpfile.name, width=1200, height=900, scale=2)
+        graph_img_path = tmpfile.name
+
+    # Create PDF
     pdf = FPDF()
     pdf.add_page()
-    pdf.set_font("Arial", size=12)
-    pdf.set_title("Network Test Logs")
-    pdf.cell(200, 10, txt="Network Test Logs", ln=True, align="C")
-    pdf.ln(10)
+    pdf.set_title("Network Speed Test Report")
 
+    # Title
+    pdf.set_font("Arial", 'B', 20)
+    pdf.set_text_color(40, 40, 120)
+    pdf.cell(0, 15, "Network Speed Test Report", ln=True, align="C")
+    pdf.ln(2)
+
+    # Date range
+    pdf.set_font("Arial", '', 12)
+    pdf.set_text_color(0, 0, 0)
+    pdf.cell(0, 10, f"Report Range: {min_time}  to  {max_time}", ln=True, align="C")
+    pdf.ln(2)
+
+    # Summary Table
+    pdf.set_font("Arial", 'B', 14)
+    pdf.cell(0, 10, "Summary Statistics", ln=True)
+    pdf.set_font("Arial", '', 12)
+    pdf.cell(0, 8, f"Average Download: {avg_download:.2f} Mbps (Min: {min_download:.2f}, Max: {max_download:.2f})", ln=True)
+    pdf.cell(0, 8, f"Average Upload: {avg_upload:.2f} Mbps (Min: {min_upload:.2f}, Max: {max_upload:.2f})", ln=True)
+    pdf.cell(0, 8, f"Average Ping: {avg_ping:.2f} ms (Min: {min_ping:.2f}, Max: {max_ping:.2f})", ln=True)
+    pdf.ln(4)
+
+    # Embed the graph image
+    pdf.set_font("Arial", 'B', 14)
+    pdf.cell(0, 10, "Speed Test History Graph", ln=True)
+    pdf.ln(2)
+    # Resize image to fit page width
+    img = PIL.Image.open(graph_img_path)
+    page_width = pdf.w - 2 * pdf.l_margin
+    img_width, img_height = img.size
+    aspect = img_height / img_width
+    img_display_width = page_width
+    img_display_height = img_display_width * aspect
+    pdf.image(graph_img_path, x=pdf.l_margin, y=pdf.get_y(), w=img_display_width, h=img_display_height)
+    pdf.ln(int(img_display_height) + 4)
+
+    # Detailed Table
+    pdf.set_font("Arial", 'B', 14)
+    pdf.cell(0, 10, "Detailed Speed Test Results", ln=True)
+    pdf.set_font("Arial", '', 10)
+    pdf.ln(2)
+    # Table header
+    pdf.set_fill_color(200, 220, 255)
+    pdf.cell(45, 8, "Time", border=1, fill=True)
+    pdf.cell(35, 8, "Download (Mbps)", border=1, fill=True)
+    pdf.cell(35, 8, "Upload (Mbps)", border=1, fill=True)
+    pdf.cell(25, 8, "Ping (ms)", border=1, fill=True)
+    pdf.ln()
+    pdf.set_fill_color(255, 255, 255)
+    # Table rows
     for row in data:
         tm = datetime.fromisoformat(row[0].replace('Z', '')).strftime("%Y-%m-%d %H:%M:%S")
-        line = f"Time: {tm}  Download: {row[1]} Mbps | Upload: {row[2]} Mbps | Ping: {row[3]} ms"
-        pdf.multi_cell(0, 10, line)
-    
-    pdf.output(filename)
-    return f"✅ Logs exported to {filename}"
+        pdf.cell(45, 8, tm, border=1)
+        pdf.cell(35, 8, f"{row[1]:.2f}", border=1)
+        pdf.cell(35, 8, f"{row[2]:.2f}", border=1)
+        pdf.cell(25, 8, f"{row[3]:.2f}", border=1)
+        pdf.ln()
 
+    pdf.output(filename)
+
+    # Clean up temp image
+    try:
+        os.remove(graph_img_path)
+    except Exception:
+        pass
+
+    return f"✅ Stunning report exported to: {filename}"
 
 # =================== End Data Base & Data Visualisation ================= #
