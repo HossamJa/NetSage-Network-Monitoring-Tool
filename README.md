@@ -73,7 +73,7 @@ TB_Network_Monitor/
 ### 1. Clone the Repository
 ```bash
 git clone https://github.com/HossamJa/NetSage-Network-Monitoring-Tool.git
-cd netsage
+cd NetSage-Network-Monitoring-Tool
 ```
 
 ### 2. Create Virtual Environment & Install Dependencies
