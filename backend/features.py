@@ -1,3 +1,4 @@
+import os
 import sys
 import platform
 import requests
@@ -20,11 +21,11 @@ import pydoc
 import plotly.graph_objs as go
 from plotly.subplots import make_subplots
 import plotly.io as pio
+import tempfile
+import PIL.Image
 
-pio.renderers.default = "browser"
 os_name = platform.system()
 init(autoreset=True)
-engine = pyttsx3.init()
 
 # +++++++++++++++ Utility Functions ++++++++++++++++++ #
  # check whether the value is a list or a datetime, and convert everything to a string for safe printing.
@@ -312,8 +313,12 @@ def check_website_stat(url):
     meta_description = None
 
     # check internet connection
-    net = check_internet()
-    if "🔴 Completely Disconnected From The Router!" in net["net_status"] or "Ping failed" in net["error"]:
+    try:
+        net = check_internet()
+
+        if "🔴 Completely Disconnected From The Router!" in net["net_status"] or "Ping failed" in net["error"]:
+            return "❌ No Internet, Please Check Your Connection"
+    except Exception as ex:
         return "❌ No Internet, Please Check Your Connection"
 
     try:
@@ -464,7 +469,7 @@ def check_Wifi_quality():
     elif os_name == "Darwin": 
         wf_info_cmnd = "airport -I"
     else:
-        print("Unable to get the full Wi-Fi, Unknown OS:", os_name)
+        print("⭕ Unable to get the full Wi-Fi, Unknown OS:", os_name)
     
     process = subprocess.Popen(wf_info_cmnd,
                                shell=True,
@@ -477,11 +482,10 @@ def check_Wifi_quality():
         if not error: 
 
             ssid_val = re.search(r"SSID\s*:\s*(\S+)\s*B", output).group(1)
-
             sgnl_qlty = re.search(r"Signal\s*:\s*(\S+)%", output).group(1)
-
             rssi_value = (float(sgnl_qlty) / 2) - 100
             strngth_statu = None
+
             if -50 <= rssi_value <= -30:
                 strngth_statu = "🔵 Excellent"
             elif -65 <= rssi_value <= -51:
@@ -521,6 +525,9 @@ def check_Wifi_quality():
 
 # ==== Auto testing & Alerting ===== #
 
+# Init For speacking out the alerts
+engine = pyttsx3.init()
+        
 def give_tst(down_threshold, up_threshold, ping_threshold):
 
     try:
@@ -542,12 +549,12 @@ def give_tst(down_threshold, up_threshold, ping_threshold):
                    + Fore.CYAN + f"Time: {datetime.now()}\n" + Fore.RESET
                    + f"Check Your Connection..\nError:\n{err}\n"
                    )
-            engine.say("Warning! Connection Lost")       
+            engine.say("Warning Connection Lost")       
             engine.runAndWait()
             engine.stop()
             return
         
-        time = test["Date_Time"]
+        raw_time = test["Date_Time"]
         # Parse ISO 8601 format
         timestamp = datetime.strptime(time, '%Y-%m-%dT%H:%M:%S.%fZ').replace(tzinfo=timezone.utc)
         # Format as 'month day, year at hour:min:sec PM/AM'
@@ -564,23 +571,17 @@ def give_tst(down_threshold, up_threshold, ping_threshold):
         if  download < down_threshold:
             # trigger an alert
             dwn_stat = Fore.RED + "⚠ Warning! Download Speed is Below the Threshold ⚠" + Fore.RESET
-            engine.say("Warning! Download Speed is Below the Threshold")
-            engine.runAndWait()
-            engine.stop()
+            engine.say("Warning Download Speed is Below the Threshold")
         
         if  upload < up_threshold:
             # trigger an alert
             up_stat = Fore.RED + "⚠ Warning! Upload Speed is Below the Threshold ⚠" + Fore.RESET
-            engine.say("Warning! Upload Speed is Below the Threshold")
-            engine.runAndWait()
-            engine.stop()
+            engine.say("Warning Upload Speed is Below the Threshold")   
         
         if  ping > ping_threshold:
             # trigger an alert
             png_stat = Fore.RED + "⚠ Warning! High latency detected! ⚠" + Fore.RESET 
-            engine.say("Warning! High latency detected!")       
-            engine.runAndWait()
-            engine.stop()
+            engine.say("Warning High latency detected!")       
 
         print(f"""
         ┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
@@ -602,16 +603,20 @@ def give_tst(down_threshold, up_threshold, ping_threshold):
         engine.stop()
 
         # Save the test results in the Database
-        data = (time, download, upload, ping)
+        data = (raw_time, download, upload, ping)
         sav_tst_rsults(data)
-
+        # Delay to not overlap the speach
+        time.sleep(2)
+        return
+    
     except speedtest.ConfigRetrievalError:
         print(f"❌ {Fore.RED} You Are Disconnected From the Router!{Fore.RESET} "
              + Fore.CYAN + f"Time: {datetime.now()}\n" + Fore.RESET
         )
-        engine.say(" You Are Disconnected")       
+        engine.say("You Are Disconnected")       
         engine.runAndWait()
         engine.stop()
+        return
 
 def auto_tst_alert(X, down_threshold, up_threshold, ping_threshold):
 
@@ -639,14 +644,16 @@ def auto_tst_alert(X, down_threshold, up_threshold, ping_threshold):
 # ==============End of Auto testing & Alerting ======================= #
 
 # =================== DataBase & Data Visualisation ================= #
-DB_PATH = "tbnm.db"
+
+# Always create the database in the same folder as this script
+DB_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "NetSageitorDB.db")
 
 # Create The Database & the Speed Test history Table
 def creat_table():
     crt_db = sqlite3.connect(DB_PATH)
     crs_db = crt_db.cursor()
     crs_db.execute(""" 
-                    CREATE TABLE IF NOt EXISTS "test_results_heistory" (
+                    CREATE TABLE IF NOt EXISTS "test_results_history" (
                         "timestamp"	REAL,
                         "download"	REAL,
                         "upload"	REAL,
@@ -662,7 +669,7 @@ def sav_tst_rsults(test):
     #Save test results to the database/CSV.
     crt_db = sqlite3.connect(DB_PATH)
     crs_db = crt_db.cursor()
-    crs_db.execute("INSERT INTO test_results_heistory VALUES (?,?,?,?)", test)
+    crs_db.execute("INSERT INTO test_results_history VALUES (?,?,?,?)", test)
     crt_db.commit()
     crt_db.close()
 
@@ -672,7 +679,7 @@ def ftch_tst_rsults():
     # fetches test results from the database
     crt_db = sqlite3.connect(DB_PATH)
     crs_db = crt_db.cursor()
-    crs_db.execute("SELECT * FROM test_results_heistory")
+    crs_db.execute("SELECT * FROM test_results_history")
     data =  crs_db.fetchall()
     crt_db.commit()
     crt_db.close()
@@ -683,12 +690,15 @@ def delet_rsults():
 
     crt_db = sqlite3.connect(DB_PATH)
     crs_db = crt_db.cursor()
-    crs_db.execute("DELETE FROM test_results_heistory ")
+    crs_db.execute("DELETE FROM test_results_history ")
     crt_db.commit()
     crt_db.close()
 
 # Format the data and generate a graph 
+pio.renderers.default = "browser"
+
 def tst_hstry_graph(range_type="all"):
+
     results = ftch_tst_rsults()
     if range_type != "all":
         now = datetime.now()
@@ -785,8 +795,8 @@ def tst_hstry_table(range_type="all"):
 
 # Export Network Logs as PDF
 def export_tst_logs(range_type="all", filename="network_logs.pdf"):
-    import os
-    import tempfile
+
+    print(Fore.YELLOW + "Collecting Speed Test History Data ..." + Style.RESET_ALL)
     data = ftch_tst_rsults()
     if not data:
         return "❗ No data to export ❗"
@@ -812,6 +822,9 @@ def export_tst_logs(range_type="all", filename="network_logs.pdf"):
     if not data:
         return "❗ No data available for the selected range ❗"
 
+    print(Fore.BLUE + "Speed Tests History Data Was Collected ✔\n" + Style.RESET_ALL)
+    print(Fore.YELLOW + "🔄 Geenerating Your Report, Please Wait ..." + Style.RESET_ALL)
+
     # If filename is not an absolute path, save to current working directory
     if not os.path.isabs(filename):
         filename = os.path.abspath(filename)
@@ -834,11 +847,6 @@ def export_tst_logs(range_type="all", filename="network_logs.pdf"):
     min_ping = min(pings)
 
     # Generate and save the graph as an image
-    import plotly.graph_objs as go
-    from plotly.subplots import make_subplots
-    import plotly.io as pio
-    import PIL.Image
-
     fig = make_subplots(rows=3, cols=1, shared_xaxes=True, subplot_titles=("Download (Mbps)", "Upload (Mbps)", "Ping (ms)"))
     hover_times = [dt.strftime('%Y-%m-%d %H:%M:%S') for dt in timestamps]
     fig.add_trace(go.Scatter(x=timestamps, y=downloads, mode='lines+markers', name='Download (Mbps)', line=dict(color='blue'), hovertemplate='<b>Date & Time:</b> %{customdata}<br><b>Download:</b> %{y:.2f} Mbps', customdata=hover_times), row=1, col=1)

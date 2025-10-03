@@ -6,21 +6,22 @@ import threading
 import socket
 from datetime import datetime
 from colorama import init, Fore, Style
-init(autoreset=True)
 from backend.features import (check_speed, get_ISPndLoc_info, get_compareson, check_internet,
                       check_website_stat, check_Wifi_quality, auto_tst_alert, delet_rsults,
                       tst_hstry_graph, tst_hstry_table, export_tst_logs, creat_table
                       )
+# Auto text color reset 
+init(autoreset=True)
 
 def run_cli():
     show_dashboard()
 
     while True:
         try:
-            cmd = input(Fore.BLUE + "\nNetwork Monitor>>> " + Style.RESET_ALL).strip().lower()
+            cmd = input(Fore.BLUE + "\nNetwork Monitor (For Command List Enter 'Help')>>> " + Style.RESET_ALL).strip().lower()
             
             if cmd == "exit" or cmd == "xt":
-                print("\n👋 Exiting TB-NetMon CLI. See you!\n")
+                print("\n👋 Exiting NetSage CLI. See you!\n")
                 break
             elif cmd == "help":
                 clear_terminal()
@@ -74,11 +75,10 @@ def run_cli():
                 print(Fore.RED + "❌ Unknown command." + Style.RESET_ALL + "Type 'help' to see available options.")
             
         except KeyboardInterrupt:
-            print("\n👋 Exiting TB-NetMon CLI. See you!\n")
+            print("\n👋 Exiting NetSage CLI. See you!\n")
             break
 
-
-# ====================== Tools ================ #
+# ====================== Utility Functions ================ #
 
 # Running animation
 def spinner(message, running_flag):
@@ -137,7 +137,7 @@ def show_dashboard():
     version = "v1.0.0"
 
     print(Style.BRIGHT + Fore.CYAN + "\n" + "═" * 70)
-    print(Fore.MAGENTA + "📡  TB-NetMon CLI – Your Network Monitoring Assistant".center(70))
+    print(Fore.MAGENTA + "📡  NetSage CLI – Your Network Monitoring Assistant".center(70))
     print(Fore.CYAN + "═" * 70 + Style.RESET_ALL)
 
     print(Fore.LIGHTBLACK_EX + f"🖥️  Host: {hostname}    📅  {now}     🧩 Version: {version}" + Style.RESET_ALL)
@@ -167,7 +167,7 @@ def command_list():
 
 def run_speed_cli():
 
-    print(Fore.MAGENTA + "\n🚀 TB-NetMon: Internet Speed Test.\n" \
+    print(Fore.MAGENTA + "\n🚀 NetSage: Internet Speed Test.\n" \
                         "═════════════════════════════════════════════\n" + Style.RESET_ALL)
     
     running = [True]
@@ -186,7 +186,7 @@ def run_speed_cli():
             print(Fore.RED + "\n❌ Failed to run the speed test!" + Style.RESET_ALL)
             print(Fore.YELLOW + f"\nError: {results['Error']}\n" + Style.RESET_ALL)
         else:
-            print(Fore.MAGENTA + "\n📡 TB-NetMon Speed Report\n" \
+            print(Fore.MAGENTA + "\n📡 NetSage Speed Report\n" \
                             "════════════════════════════════════" + Style.RESET_ALL)
             print(f"📥  Download Speed : {Fore.GREEN}{results['Download']} Mbps{Style.RESET_ALL}")
             print(f"📤  Upload Speed   : {Fore.GREEN}{results['Upload']} Mbps{Style.RESET_ALL}")
@@ -197,7 +197,7 @@ def run_speed_cli():
             print(Fore.BLUE + "\n💡 Tip: Type 'compare-global' to check how your speed compares to the global average." + Style.RESET_ALL)
 
 def run_auto_test():
-    print(Fore.MAGENTA + "\n📡 TB-NetMon: Auto Speed Testing & Alerts\n" \
+    print(Fore.MAGENTA + "\n📡 NetSage: Auto Speed Testing & Alerts\n" \
           "══════════════════════════════════════════════════════════════\n" + Style.RESET_ALL)
     print(Fore.CYAN + "⚙️  Configure thresholds and test interval below:\n" + Style.RESET_ALL)
 
@@ -243,7 +243,7 @@ def internet_stat():
 
             clear_terminal()  # clears the terminal before updating 
 
-            print(Fore.MAGENTA + "\n🌐 TB-NetMon: Live Internet Monitor")
+            print(Fore.MAGENTA + "\n🌐 NetSage: Live Internet Monitor")
             print("════════════════════════════════════" + Style.RESET_ALL)
 
             print(f"{Fore.CYAN}📶 Internet Status: {Style.RESET_ALL}{internet_status}")
@@ -260,7 +260,7 @@ def internet_stat():
         print(Fore.RED + "\n\n↩ Exiting Live Internet Monitor.\n" + Style.RESET_ALL)
 
 def compare_global():
-    print(Fore.MAGENTA + "\n🌍 TB-NetMon: Compare to Global Average\n" \
+    print(Fore.MAGENTA + "\n🌍 NetSage: Compare to Global Average\n" \
                         "═════════════════════════════════════════════" + Style.RESET_ALL)
 
     try:
@@ -308,7 +308,7 @@ def compare_global():
 
 def signal_qulty():
 
-    print(Fore.MAGENTA + "\n📡 TB-NetMon: Wi-Fi Signal Strength Detector\n" \
+    print(Fore.MAGENTA + "\n📡 NetSage: Wi-Fi Signal Strength Detector\n" \
                             "═════════════════════════════════════════════" + Style.RESET_ALL)
     
     try:
@@ -331,7 +331,7 @@ def signal_qulty():
         print(Fore.RED + "\n\n↩ Exited Wi-Fi Signal Quality Monitoring.\n" + Style.RESET_ALL)
 
 def isp_info():
-    print(Fore.MAGENTA + "\n🌍 TB-NetMon: ISP & Location Information\n" \
+    print(Fore.MAGENTA + "\n🌍 NetSage: ISP & Location Information\n" \
                         "════════════════════════════════════════════════" + Style.RESET_ALL)
 
     running = [True]
@@ -368,7 +368,7 @@ def isp_info():
         print(Fore.CYAN + "\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n" + Style.RESET_ALL)
 
 def url_info():
-    print(Fore.CYAN + "\n🌐🔍 WEBSITE CHECKER TOOL\n" \
+    print(Fore.CYAN + "\n🌐🔍 NetSage WEBSITE CHECKER TOOL\n" \
                 "═════════════════════════════════════════════" + Style.RESET_ALL)
 
     while True:
@@ -451,7 +451,7 @@ def show_table():
             "  ❌ Type 'delet' or 'dlt' to delete stored history\n" + Style.RESET_ALL)
 
 def show_graph():
-    print(Fore.MAGENTA + "\n📈 TB-NetMon: View Past Speed Test Logs in Graph\n" \
+    print(Fore.MAGENTA + "\n📈 NetSage: View Past Speed Test Logs in Graph\n" \
                     "══════════════════════════════════════════════════════════════" + Style.RESET_ALL)
 
     range_type = filter_date()
