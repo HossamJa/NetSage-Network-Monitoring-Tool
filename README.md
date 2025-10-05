@@ -22,7 +22,7 @@ I plan to **keep updating, upgrading, and eventually turning it into a full-stac
 ---
 ## Demo:
 
-<iframe width="560" height="315" src="https://www.youtube.com/embed/_gS_DNmrXtE?si=TlTDibBSdm4Hwdly" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
+[Watch the Demo Video On YouTube >>](https://youtu.be/_gS_DNmrXtE?si=Dgu5thtvEJuRZnpn)
 
 ## 🚀 Features
 
