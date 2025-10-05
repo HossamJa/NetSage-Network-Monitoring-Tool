@@ -20,6 +20,9 @@ The goal was to **practice and apply all the Python basics** I had just learned,
 I plan to **keep updating, upgrading, and eventually turning it into a full-stack application**.
 
 ---
+## Demo:
+
+<iframe width="560" height="315" src="https://www.youtube.com/embed/_gS_DNmrXtE?si=TlTDibBSdm4Hwdly" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
 
 ## 🚀 Features
 
