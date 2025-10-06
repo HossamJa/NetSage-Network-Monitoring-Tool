@@ -53,7 +53,7 @@ user_upload_speed = None
 user_ping = None
 
 # Get the download/upload speed and Ping 
-def check_speed():
+def check_speed(from_test_cases=False):
     
     global user_country
     global user_download_speed
@@ -87,10 +87,10 @@ def check_speed():
                 'byts_R' : bytes_received, 
                 "Country_gui": user_country,
                 }
-        
-        # Save the test results in the Database
-        data = (results["Date_Time"], results["Download"], results["Upload"], results["Ping"])
-        sav_tst_rsults(data)
+        if from_test_cases == False: # Check if not from the test cases
+            # Save the test results in the Database
+            data = (results["Date_Time"], results["Download"], results["Upload"], results["Ping"])
+            sav_tst_rsults(data)
 
     except speedtest.ConfigRetrievalError:
         results = {"Error": "Speedtest config retrieval failed. 💡Check your connection."}
@@ -135,6 +135,7 @@ def get_compareson():
 
     if user_country == None:
         return "⭕ No Speed Test Data Was Given❗"
+
     
     else:
         try:
@@ -145,7 +146,7 @@ def get_compareson():
                     break
                 elif respons and respons.status_code != 200:
                     print(f"Error: Received status code {respons.status_code}")
-                    return f"❌No Global Speed Data Was Given❗"
+                    return f"❌ Failed To Retrieve Global Speed Data❗"
                 elif not respons:
                     print("No response received, retrying...")
                     time.sleep(3)  # Wait before retrying
@@ -197,6 +198,7 @@ def get_compareson():
 
 # Get the Internet Status and Trubleshooting
 def check_internet(use_color=True):
+
     # Set colors if in CLI mode
     if use_color:
         green = Fore.GREEN
@@ -218,6 +220,14 @@ def check_internet(use_color=True):
     ping_value = None
     ping_data = []
     trblshoting_suggs = None
+    error = None
+
+    # Retrieves the local IP address of the machine.
+    try:
+        hostname = socket.gethostname()
+        local_ip = socket.gethostbyname(hostname)
+    except socket.gaierror:
+        error = "Unable to resolve local IP address."
 
     try:
         result = subprocess.run(["ping", "-n", "1", local_ip], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, timeout=2)
@@ -239,6 +249,7 @@ def check_internet(use_color=True):
 
     except Exception as e:
         error = f"Ping failed: {e}"
+        print(f"Ping failed: {e}")
         conect_router = False
 
     if conect_router:
@@ -311,15 +322,6 @@ def check_website_stat(url):
     ping_sever = []
     meta_titl = None
     meta_description = None
-
-    # check internet connection
-    try:
-        net = check_internet()
-
-        if "🔴 Completely Disconnected From The Router!" in net["net_status"] or "Ping failed" in net["error"]:
-            return "❌ No Internet, Please Check Your Connection"
-    except Exception as ex:
-        return "❌ No Internet, Please Check Your Connection"
 
     try:
         valid = r"^https?://(www\.)?(?P<domain>[^/]+)"
@@ -556,7 +558,7 @@ def give_tst(down_threshold, up_threshold, ping_threshold):
         
         raw_time = test["Date_Time"]
         # Parse ISO 8601 format
-        timestamp = datetime.strptime(time, '%Y-%m-%dT%H:%M:%S.%fZ').replace(tzinfo=timezone.utc)
+        timestamp = datetime.strptime(raw_time, '%Y-%m-%dT%H:%M:%S.%fZ').replace(tzinfo=timezone.utc)
         # Format as 'month day, year at hour:min:sec PM/AM'
         date_time = timestamp.strftime('%B %d, %Y at %I:%M:%S %p')
 

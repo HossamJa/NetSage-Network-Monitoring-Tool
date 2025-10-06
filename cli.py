@@ -336,7 +336,7 @@ def isp_info():
 
     running = [True]
     thread = threading.Thread(target=spinner, args=("Fetching ISP & Location Data", running))
-
+    error = None
     try:
         thread.start()
         info = get_ISPndLoc_info()
