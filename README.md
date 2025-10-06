@@ -20,6 +20,9 @@ The goal was to **practice and apply all the Python basics** I had just learned,
 I plan to **keep updating, upgrading, and eventually turning it into a full-stack application**.
 
 ---
+## Demo:
+
+[Watch the Demo Video On YouTube >>](https://youtu.be/_gS_DNmrXtE?si=Dgu5thtvEJuRZnpn)
 
 ## 🚀 Features
 
