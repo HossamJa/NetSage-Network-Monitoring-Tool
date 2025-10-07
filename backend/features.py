@@ -65,13 +65,13 @@ def valid_api_tooken(gui=False):
                             print("In order to use the ISP and Location feature, you need to get a free API token from ipinfo.io")
                             user_token = input("Enter the API token (or press Enter to skip): ").strip()
                             if user_token:
-                                
+                                TOKEN = user_token
                                 # checking if the tooken is valid
                                 print("🔄 Validating the API token...")
                                 try:
                                     response = requests.get(f"https://ipinfo.io/json?token={TOKEN}")
                                     if response.status_code != 200:
-                                        print(Fore.RED + "❌ Invalid API token. The ISP and Location feature will be disabled." + Style.RESET_ALL)
+                                        print(Fore.RED + "❌ Invalid API token." + Style.RESET_ALL)
                                         TOKEN = None
                                     else:
                                         print(Fore.GREEN + "✔ API token set successfully." + Style.RESET_ALL)
@@ -84,6 +84,10 @@ def valid_api_tooken(gui=False):
                                 except Exception as e:
                                     print(Fore.RED + f"❌ Error validating API token: {e}. The ISP and Location feature will be disabled." + Style.RESET_ALL)
                                     TOKEN = None
+                            else:
+                                print("⚠️  No API token provided. The ISP and Location feature will be disabled❗")
+                                TOKEN = None
+                                break
                         except KeyboardInterrupt:
                             print("The ISP and Location feature will be disabled.")
                             break
