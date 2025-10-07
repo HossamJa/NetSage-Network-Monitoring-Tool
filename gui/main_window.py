@@ -1,5 +1,5 @@
 import sys
-from backend.features import creat_table
+from backend.features import creat_table, valid_api_tooken
 from PyQt5.QtWidgets import (QApplication, QWidget,QVBoxLayout, QLabel, QScrollArea,
                               QHBoxLayout, QCheckBox, QMainWindow,
                              QTableWidget, QSizePolicy, QComboBox)                             
@@ -50,6 +50,8 @@ class NetworkMonitor(QMainWindow):
 
 
 def run_gui():
+    # Validate the API tooken
+    valid_api_tooken(gui=True)
     # Creat the Database and the test history table
     creat_table()
     # Show the app window    

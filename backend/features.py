@@ -44,6 +44,49 @@ def format_date(value):
     else:
         return str(value)
 
+TOKEN = None
+
+def valid_api_tooken(gui=False):
+
+    global TOKEN
+
+    if TOKEN is None:
+        token = get_token()
+        if token:
+            TOKEN = token
+            
+        else:
+            while True:
+                    if gui:
+                        pass
+
+                    else:
+                        try:
+                            print("In order to use the ISP and Location feature, you need to get a free API token from ipinfo.io")
+                            user_token = input("Enter the API token (or press Enter to skip): ").strip()
+                            if user_token:
+                                
+                                # checking if the tooken is valid
+                                print("🔄 Validating the API token...")
+                                try:
+                                    response = requests.get(f"https://ipinfo.io/json?token={TOKEN}")
+                                    if response.status_code != 200:
+                                        print(Fore.RED + "❌ Invalid API token. The ISP and Location feature will be disabled." + Style.RESET_ALL)
+                                        TOKEN = None
+                                    else:
+                                        print(Fore.GREEN + "✔ API token set successfully." + Style.RESET_ALL)
+                                        TOKEN = user_token
+                                        service = "ipinfo.io"
+                                        # Save it to db
+                                        save_token_to_db((TOKEN, service))
+                                        break
+                                
+                                except Exception as e:
+                                    print(Fore.RED + f"❌ Error validating API token: {e}. The ISP and Location feature will be disabled." + Style.RESET_ALL)
+                                    TOKEN = None
+                        except KeyboardInterrupt:
+                            print("The ISP and Location feature will be disabled.")
+                            break
 # ++++++++++++++++++++++++++++++++++++++++++ Feature Functions +++++++++++++++++++++++++++ #            
 
 # Global Variables
@@ -93,7 +136,7 @@ def check_speed(from_test_cases=False):
             sav_tst_rsults(data)
 
     except speedtest.ConfigRetrievalError:
-        results = {"Error": "Speedtest config retrieval failed. 💡Check your connection."}
+        results = {"Error": "Speedtest config retrieval failed. 💡 Check your connection."}
     except speedtest.SpeedtestException as e:
         results = {"Error": str(e)}
     
@@ -102,7 +145,15 @@ def check_speed(from_test_cases=False):
 # Get ISP and Location info 
 def get_ISPndLoc_info():
 
-    token_key = "3d1cd55ac4bb4b"
+    # Check for valid token
+    if TOKEN is None:
+        # Retrive the token from db
+        token_key = get_token()
+        if token_key is None:
+            return {"api_Error": "No API token provided. ISP and Location feature is disabled."}
+    else:
+        token_key = TOKEN
+
     api = f"https://ipinfo.io/json?token={token_key}"
     try:
         respons = requests.get(api)
@@ -650,7 +701,20 @@ def auto_tst_alert(X, down_threshold, up_threshold, ping_threshold):
 # Always create the database in the same folder as this script
 DB_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "NetSageitorDB.db")
 
-# Create The Database & the Speed Test history Table
+# Create a Database for user API Tokens
+def creat_token_table():
+    crt_db = sqlite3.connect(DB_PATH)
+    crs_db = crt_db.cursor()
+    crs_db.execute(""" 
+                    CREATE TABLE IF NOt EXISTS "user_tokens" (
+                        "service" REAL,
+                        "token"	REAL
+                        )
+                    """)
+    crt_db.commit()
+    crt_db.close()
+
+# Create a Database For Speed Test history
 def creat_table():
     crt_db = sqlite3.connect(DB_PATH)
     crs_db = crt_db.cursor()
@@ -665,13 +729,33 @@ def creat_table():
     crt_db.commit()
     crt_db.close()
 
-#Save test results to the database
-def sav_tst_rsults(test):
+# Retrive API Tokens
+def get_token():
+    crt_db = sqlite3.connect(DB_PATH)
+    crs_db = crt_db.cursor()
+    crs_db.execute("SELECT * FROM user_tokens")
+    data =  crs_db.fetchall()
+    crt_db.commit()
+    crt_db.close()
+    if data:
+        return data[-1][1]  # Return the last saved token
+    else:
+        return None
+
+def save_token_to_db(token):
+    crt_db = sqlite3.connect(DB_PATH)
+    crs_db = crt_db.cursor()
+    crs_db.execute("INSERT INTO user_tokens VALUES (?,?)", token)
+    crt_db.commit()
+    crt_db.close()
+
+# Save test data to the database
+def sav_tst_rsults(test_data):
 
     #Save test results to the database/CSV.
     crt_db = sqlite3.connect(DB_PATH)
     crs_db = crt_db.cursor()
-    crs_db.execute("INSERT INTO test_results_history VALUES (?,?,?,?)", test)
+    crs_db.execute(f"INSERT INTO test_results_history VALUES (?,?,?,?)", test_data)
     crt_db.commit()
     crt_db.close()
 

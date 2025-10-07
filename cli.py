@@ -8,7 +8,8 @@ from datetime import datetime
 from colorama import init, Fore, Style
 from backend.features import (check_speed, get_ISPndLoc_info, get_compareson, check_internet,
                       check_website_stat, check_Wifi_quality, auto_tst_alert, delet_rsults,
-                      tst_hstry_graph, tst_hstry_table, export_tst_logs, creat_table
+                      tst_hstry_graph, tst_hstry_table, export_tst_logs, creat_table, valid_api_tooken, 
+                      creat_token_table
                       )
 # Auto text color reset 
 init(autoreset=True)
@@ -340,6 +341,15 @@ def isp_info():
     try:
         thread.start()
         info = get_ISPndLoc_info()
+        if "api_Error" in info:
+            ask_api = input("Do you have a valid API token? yes/no >> ").strip().lower()
+            if ask_api == "yes" or ask_api == "y":
+                valid_api_tooken()
+                return
+            else:
+                print(Fore.RED + "\n❌ ISP & Location feature is disabled without a valid API token." + Style.RESET_ALL)
+                return
+            
         if "Error" in info:
             error = info["Error"]
             message = info["Message"]
@@ -489,5 +499,7 @@ def delet_data():
             print(Fore.RED + "\n❎ Invalid Command❕\n" + Style.RESET_ALL)    
 
 if __name__ == "__main__":
+    creat_token_table()
+    valid_api_tooken()
     creat_table()
     run_cli()
